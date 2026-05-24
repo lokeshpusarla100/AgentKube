@@ -20,6 +20,11 @@ fn main() {
                 std::process::exit(1);
             }
 
+            if let Err(error) = process.start() {
+                eprintln!("failed to start agent process: {}", error);
+                std::process::exit(1);
+            }
+
             println!(
                 "loaded agent process: id={}, state={:?}",
                 process.id(),
