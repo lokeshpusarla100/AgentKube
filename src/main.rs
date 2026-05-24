@@ -10,7 +10,7 @@ pub mod runtime;
 use std::path::Path;
 
 use crate::app::load_process_from_file;
-use crate::runtime::run_fixed_steps;
+use crate::runtime::{format_step_trace, run_fixed_steps};
 
 // Later this will start the gRPC server and engine runtime.
 fn main() {
@@ -35,6 +35,10 @@ fn main() {
                     std::process::exit(1);
                 }
             };
+
+            for line in format_step_trace(&records) {
+                println!("{}", line);
+            }
 
             println!(
                 "loaded agent process: id={}, state={:?}, steps={}",
