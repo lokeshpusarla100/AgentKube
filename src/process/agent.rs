@@ -38,6 +38,11 @@ impl AgentProcess {
         self.state
     }
 
+    pub fn load(&mut self) -> Result<(), String> {
+        // Loading finishes by making the process ready to run.
+        self.transition_to(AgentState::Ready)
+    }
+
     pub fn transition_to(&mut self, next: AgentState) -> Result<(), String> {
         // Invalid transitions leave the current state untouched.
         if is_valid_transition(self.state, next) {
@@ -103,6 +108,16 @@ mod tests {
         let mut agent = AgentProcess::from_config(test_config()).expect("config should be valid");
 
         let result = agent.transition_to(AgentState::Ready);
+
+        assert!(result.is_ok());
+        assert_eq!(agent.state(), AgentState::Ready);
+    }
+
+    #[test]
+    fn load_moves_process_to_ready() {
+        let mut agent = AgentProcess::from_config(test_config()).expect("config should be valid");
+
+        let result = agent.load();
 
         assert!(result.is_ok());
         assert_eq!(agent.state(), AgentState::Ready);

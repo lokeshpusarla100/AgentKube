@@ -1,13 +1,4 @@
-use super::{validate_agent_config, AgentConfig};
-
-// Separates broken YAML from valid YAML with unsafe values.
-#[derive(Debug, PartialEq)]
-pub enum ConfigError {
-    // YAML was broken or did not match our config shape.
-    InvalidYaml(String),
-    // YAML parsed, but the engine should not run it.
-    InvalidConfig(String),
-}
+use super::{AgentConfig, ConfigError, validate_agent_config};
 
 // Single entry point for loading an agent definition.
 pub fn parse_agent_config(yaml: &str) -> Result<AgentConfig, ConfigError> {
