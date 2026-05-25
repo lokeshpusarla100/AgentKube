@@ -1,6 +1,6 @@
 use crate::process::{AgentProcess, AgentState};
 
-use super::{RuntimeError, RuntimeReport, StepRecord};
+use super::{RuntimeError, RuntimeReport, execute_step};
 
 // Runs a deterministic fake loop before real LLM/tool logic exists.
 pub fn run_agent_loop(
@@ -18,7 +18,7 @@ pub fn run_agent_loop(
     let mut records = Vec::new();
 
     for step_number in 1..=max_steps {
-        records.push(StepRecord::new(step_number));
+        records.push(execute_step(step_number));
     }
 
     process.complete().map_err(RuntimeError::Lifecycle)?;
