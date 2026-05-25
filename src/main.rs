@@ -13,7 +13,7 @@ pub mod test_support;
 use std::path::Path;
 
 use crate::app::load_process_from_file;
-use crate::runtime::{format_step_trace, run_fixed_steps};
+use crate::runtime::{format_step_trace, run_agent_loop};
 
 // Later this will start the gRPC server and engine runtime.
 fn main() {
@@ -33,7 +33,7 @@ fn main() {
 
             let max_steps = process.config().spec.resources.max_steps_per_task;
 
-            let report = match run_fixed_steps(&mut process, max_steps) {
+            let report = match run_agent_loop(&mut process, max_steps) {
                 Ok(report) => report,
                 Err(error) => {
                     eprintln!("failed to run agent process: {:?}", error);

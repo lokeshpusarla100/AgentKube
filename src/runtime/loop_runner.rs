@@ -3,7 +3,7 @@ use crate::process::{AgentProcess, AgentState};
 use super::{RuntimeError, RuntimeReport, StepRecord};
 
 // Runs a deterministic fake loop before real LLM/tool logic exists.
-pub fn run_fixed_steps(
+pub fn run_agent_loop(
     process: &mut AgentProcess,
     max_steps: u32,
 ) -> Result<RuntimeReport, RuntimeError> {
@@ -29,7 +29,7 @@ pub fn run_fixed_steps(
 #[cfg(test)]
 // Runtime tests prove execution only happens in Running state.
 mod tests {
-    use super::run_fixed_steps;
+    use super::run_agent_loop;
     use crate::process::{AgentProcess, AgentState};
     use crate::runtime::RuntimeError;
     use crate::test_support::config_factory::{running_agent, test_config};
@@ -38,7 +38,7 @@ mod tests {
     fn runs_three_steps_and_completes_process() {
         let mut agent = running_agent();
 
-        let report = run_fixed_steps(&mut agent, 3).expect("runtime should run");
+        let report = run_agent_loop(&mut agent, 3).expect("runtime should run");
 
         assert_eq!(report.step_count(), 3);
         assert_eq!(report.steps[0].step_number, 1);
@@ -51,7 +51,7 @@ mod tests {
     fn rejects_zero_steps() {
         let mut agent = running_agent();
 
-        let result = run_fixed_steps(&mut agent, 0);
+        let result = run_agent_loop(&mut agent, 0);
 
         assert_eq!(result, Err(RuntimeError::InvalidStepLimit));
         assert_eq!(agent.state(), AgentState::Running);
@@ -61,7 +61,7 @@ mod tests {
     fn rejects_process_that_is_not_running() {
         let mut agent = AgentProcess::from_config(test_config()).expect("config should be valid");
 
-        let result = run_fixed_steps(&mut agent, 3);
+        let result = run_agent_loop(&mut agent, 3);
 
         assert_eq!(result, Err(RuntimeError::ProcessNotRunning));
         assert_eq!(agent.state(), AgentState::Loading);
