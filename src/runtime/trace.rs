@@ -50,13 +50,13 @@ mod tests {
             lines,
             vec![
                 "step 1: Perceive -> Reason -> Act",
-                "  Perceive: gathered runtime context",
-                "  Reason: selected next action",
-                "  Act: executed selected action",
+                "  Perceive: loaded context",
+                "  Reason: selected action",
+                "  Act: executed action",
                 "step 2: Perceive -> Reason -> Act",
-                "  Perceive: gathered runtime context",
-                "  Reason: selected next action",
-                "  Act: executed selected action",
+                "  Perceive: loaded context",
+                "  Reason: selected action",
+                "  Act: executed action",
             ]
         );
     }

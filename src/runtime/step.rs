@@ -20,9 +20,9 @@ impl StepRecord {
         Self {
             step_number,
             phases: vec![
-                PhaseOutput::new(StepPhase::Perceive, "gathered runtime context"),
-                PhaseOutput::new(StepPhase::Reason, "selected next action"),
-                PhaseOutput::new(StepPhase::Act, "executed selected action"),
+                PhaseOutput::new(StepPhase::Perceive, "loaded context"),
+                PhaseOutput::new(StepPhase::Reason, "selected action"),
+                PhaseOutput::new(StepPhase::Act, "executed action"),
             ],
         }
     }

@@ -1,8 +1,12 @@
+use crate::process::AgentProcess;
 use crate::runtime::{PhaseOutput, StepPhase};
 
 // Perceive will gather context and observations later.
-pub fn perceive() -> PhaseOutput {
-    PhaseOutput::new(StepPhase::Perceive, "gathered runtime context")
+pub fn perceive(process: &AgentProcess) -> PhaseOutput {
+    PhaseOutput::new(
+        StepPhase::Perceive,
+        format!("loaded context for {}", process.id()),
+    )
 }
 
 #[cfg(test)]
@@ -12,6 +16,8 @@ mod tests {
 
     #[test]
     fn returns_perceive_phase() {
-        assert_eq!(perceive().phase, StepPhase::Perceive);
+        let agent = crate::test_support::config_factory::running_agent();
+
+        assert_eq!(perceive(&agent).phase, StepPhase::Perceive);
     }
 }

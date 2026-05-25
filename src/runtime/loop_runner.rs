@@ -18,7 +18,7 @@ pub fn run_agent_loop(
     let mut records = Vec::new();
 
     for step_number in 1..=max_steps {
-        records.push(execute_step(step_number));
+        records.push(execute_step(process, step_number));
     }
 
     process.complete().map_err(RuntimeError::Lifecycle)?;
