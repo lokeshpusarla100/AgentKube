@@ -22,6 +22,11 @@ pub fn validate_agent_config(config: &AgentConfig) -> Result<(), String> {
         return Err("spec.resources.max_tokens_per_task must be greater than 0".to_string());
     }
 
+    // Zero steps means the runtime can never do useful work.
+    if config.spec.resources.max_steps_per_task == 0 {
+        return Err("spec.resources.max_steps_per_task must be greater than 0".to_string());
+    }
+
     Ok(())
 }
 
@@ -61,6 +66,19 @@ mod tests {
         );
     }
 
+    #[test]
+    fn rejects_zero_step_budget() {
+        let mut config = test_config();
+        config.spec.resources.max_steps_per_task = 0;
+
+        let result = validate_agent_config(&config);
+
+        assert_eq!(
+            result,
+            Err("spec.resources.max_steps_per_task must be greater than 0".to_string())
+        );
+    }
+
     fn test_config() -> AgentConfig {
         AgentConfig {
             api_version: "agentkube/v1".to_string(),
@@ -75,6 +93,7 @@ mod tests {
                 resources: Resources {
                     max_memory: "50MB".to_string(),
                     max_tokens_per_task: 5000,
+                    max_steps_per_task: 3,
                     timeout_per_step: "30s".to_string(),
                     timeout_per_task: "300s".to_string(),
                 },

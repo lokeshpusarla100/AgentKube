@@ -31,6 +31,7 @@ pub struct AgentSpec {
 pub struct Resources {
     pub max_memory: String,           // memory budget label
     pub max_tokens_per_task: u32,     // token budget
+    pub max_steps_per_task: u32,      // loop step budget
     pub timeout_per_step: String,     // single loop timeout
     pub timeout_per_task: String,     // whole task timeout
 }

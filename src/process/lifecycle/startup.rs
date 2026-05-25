@@ -64,6 +64,7 @@ mod tests {
                 resources: Resources {
                     max_memory: "50MB".to_string(),
                     max_tokens_per_task: 5000,
+                    max_steps_per_task: 3,
                     timeout_per_step: "30s".to_string(),
                     timeout_per_task: "300s".to_string(),
                 },

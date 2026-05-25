@@ -34,6 +34,7 @@ spec:
   resources:
     max_memory: 50MB
     max_tokens_per_task: 5000
+    max_steps_per_task: 3
     timeout_per_step: 30s
     timeout_per_task: 300s
   restart_policy: on_failure

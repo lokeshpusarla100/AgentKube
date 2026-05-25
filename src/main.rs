@@ -28,7 +28,9 @@ fn main() {
                 std::process::exit(1);
             }
 
-            let records = match run_fixed_steps(&mut process, 3) {
+            let max_steps = process.config().spec.resources.max_steps_per_task;
+
+            let records = match run_fixed_steps(&mut process, max_steps) {
                 Ok(records) => records,
                 Err(error) => {
                     eprintln!("failed to run agent process: {:?}", error);
