@@ -1,8 +1,11 @@
-use super::StepRecord;
+use super::{StepRecord, act, perceive, reason};
 
 // Executes one fake ReAct step until real phase logic exists.
 pub fn execute_step(step_number: u32) -> StepRecord {
-    StepRecord::new(step_number)
+    StepRecord {
+        step_number,
+        phases: vec![perceive().phase, reason().phase, act().phase],
+    }
 }
 
 #[cfg(test)]
