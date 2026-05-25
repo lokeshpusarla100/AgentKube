@@ -4,9 +4,13 @@ use super::{StepRecord, act, perceive, reason};
 
 // Executes one fake ReAct step until real phase logic exists.
 pub fn execute_step(process: &AgentProcess, step_number: u32) -> StepRecord {
+    let perceive_output = perceive(process);
+    let reason_output = reason(process);
+    let act_output = act(process, reason_output.action.as_deref());
+
     StepRecord {
         step_number,
-        phases: vec![perceive(process), reason(process), act(process)],
+        phases: vec![perceive_output, reason_output, act_output],
     }
 }
 

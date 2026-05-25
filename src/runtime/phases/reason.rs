@@ -3,9 +3,18 @@ use crate::runtime::{PhaseOutput, StepPhase};
 
 // Reason will call the model or planner later.
 pub fn reason(process: &AgentProcess) -> PhaseOutput {
-    PhaseOutput::new(
+    let action = process
+        .config()
+        .spec
+        .tools
+        .first()
+        .cloned()
+        .unwrap_or_else(|| "final_answer".to_string());
+
+    PhaseOutput::with_action(
         StepPhase::Reason,
-        format!("selected action using {}", process.config().spec.model),
+        format!("selected {} using {}", action, process.config().spec.model),
+        action,
     )
 }
 
