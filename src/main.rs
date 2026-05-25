@@ -33,23 +33,23 @@ fn main() {
 
             let max_steps = process.config().spec.resources.max_steps_per_task;
 
-            let records = match run_fixed_steps(&mut process, max_steps) {
-                Ok(records) => records,
+            let report = match run_fixed_steps(&mut process, max_steps) {
+                Ok(report) => report,
                 Err(error) => {
                     eprintln!("failed to run agent process: {:?}", error);
                     std::process::exit(1);
                 }
             };
 
-            for line in format_step_trace(&records) {
+            for line in format_step_trace(&report.steps) {
                 println!("{}", line);
             }
 
             println!(
                 "loaded agent process: id={}, state={:?}, steps={}",
                 process.id(),
-                process.state(),
-                records.len()
+                report.final_state,
+                report.step_count()
             );
         }
         Err(error) => {

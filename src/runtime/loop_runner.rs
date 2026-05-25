@@ -1,12 +1,12 @@
 use crate::process::{AgentProcess, AgentState};
 
-use super::{RuntimeError, StepRecord};
+use super::{RuntimeError, RuntimeReport, StepRecord};
 
 // Runs a deterministic fake loop before real LLM/tool logic exists.
 pub fn run_fixed_steps(
     process: &mut AgentProcess,
     max_steps: u32,
-) -> Result<Vec<StepRecord>, RuntimeError> {
+) -> Result<RuntimeReport, RuntimeError> {
     if max_steps == 0 {
         return Err(RuntimeError::InvalidStepLimit);
     }
@@ -23,7 +23,7 @@ pub fn run_fixed_steps(
 
     process.complete().map_err(RuntimeError::Lifecycle)?;
 
-    Ok(records)
+    Ok(RuntimeReport::new(process.state(), records))
 }
 
 #[cfg(test)]
@@ -38,11 +38,12 @@ mod tests {
     fn runs_three_steps_and_completes_process() {
         let mut agent = running_agent();
 
-        let records = run_fixed_steps(&mut agent, 3).expect("runtime should run");
+        let report = run_fixed_steps(&mut agent, 3).expect("runtime should run");
 
-        assert_eq!(records.len(), 3);
-        assert_eq!(records[0].step_number, 1);
-        assert_eq!(records[2].step_number, 3);
+        assert_eq!(report.step_count(), 3);
+        assert_eq!(report.steps[0].step_number, 1);
+        assert_eq!(report.steps[2].step_number, 3);
+        assert_eq!(report.final_state, AgentState::Done);
         assert_eq!(agent.state(), AgentState::Done);
     }
 
