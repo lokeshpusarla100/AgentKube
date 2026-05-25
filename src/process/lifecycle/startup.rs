@@ -16,8 +16,8 @@ impl AgentProcess {
 #[cfg(test)]
 // Startup tests prove callers cannot skip required stages.
 mod tests {
-    use crate::config::{AgentConfig, AgentSpec, Metadata, Resources};
     use crate::process::{AgentProcess, AgentState};
+    use crate::test_support::config_factory::test_config;
 
     #[test]
     fn load_moves_process_to_ready() {
@@ -48,29 +48,5 @@ mod tests {
 
         assert!(result.is_err());
         assert_eq!(agent.state(), AgentState::Loading);
-    }
-
-    fn test_config() -> AgentConfig {
-        AgentConfig {
-            api_version: "agentkube/v1".to_string(),
-            kind: "Agent".to_string(),
-            metadata: Metadata {
-                name: "researcher".to_string(),
-            },
-            spec: AgentSpec {
-                model: "gemini-flash".to_string(),
-                system_prompt: "Research and cite sources.".to_string(),
-                tools: vec!["web_search".to_string()],
-                resources: Resources {
-                    max_memory: "50MB".to_string(),
-                    max_tokens_per_task: 5000,
-                    max_steps_per_task: 3,
-                    timeout_per_step: "30s".to_string(),
-                    timeout_per_task: "300s".to_string(),
-                },
-                restart_policy: "on_failure".to_string(),
-                max_restarts: 3,
-            },
-        }
     }
 }

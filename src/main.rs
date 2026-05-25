@@ -6,6 +6,9 @@ pub mod config;
 pub mod process;
 // Expose the execution loop runtime.
 pub mod runtime;
+// Test-only helpers keep repeated setup out of production modules.
+#[cfg(test)]
+pub mod test_support;
 
 use std::path::Path;
 
