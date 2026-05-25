@@ -2,9 +2,9 @@ use super::{StepPhase, StepRecord};
 
 // Turns runtime step records into readable output.
 pub fn format_step_trace(records: &[StepRecord]) -> Vec<String> {
-    records
-        .iter()
-        .map(|record| {
+    let mut lines = Vec::new();
+
+    for record in records {
             let phases = record
                 .phases
                 .iter()
@@ -12,9 +12,18 @@ pub fn format_step_trace(records: &[StepRecord]) -> Vec<String> {
                 .collect::<Vec<_>>()
                 .join(" -> ");
 
-            format!("step {}: {}", record.step_number, phases)
-        })
-        .collect()
+        lines.push(format!("step {}: {}", record.step_number, phases));
+
+        for output in &record.phases {
+            lines.push(format!(
+                "  {}: {}",
+                format_phase(&output.phase),
+                output.summary
+            ));
+        }
+    }
+
+    lines
 }
 
 fn format_phase(phase: &StepPhase) -> &'static str {
@@ -41,7 +50,13 @@ mod tests {
             lines,
             vec![
                 "step 1: Perceive -> Reason -> Act",
+                "  Perceive: gathered runtime context",
+                "  Reason: selected next action",
+                "  Act: executed selected action",
                 "step 2: Perceive -> Reason -> Act",
+                "  Perceive: gathered runtime context",
+                "  Reason: selected next action",
+                "  Act: executed selected action",
             ]
         );
     }
