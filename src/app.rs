@@ -41,7 +41,8 @@ pub fn run_default_agent() -> Result<(), AppError> {
     }
 
     println!(
-        "loaded agent process: state={:?}, steps={}",
+        "loaded agent process: id={}, state={:?}, steps={}",
+        report.agent_id,
         report.final_state,
         report.step_count()
     );
@@ -122,6 +123,7 @@ spec:
         fs::remove_file(&path).expect("test file should be removed");
 
         assert_eq!(report.final_state, AgentState::Done);
+        assert_eq!(report.agent_id, "researcher");
         assert_eq!(report.step_count(), 3);
     }
 }

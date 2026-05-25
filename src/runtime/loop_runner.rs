@@ -23,7 +23,11 @@ pub fn run_agent_loop(
 
     process.complete().map_err(RuntimeError::Lifecycle)?;
 
-    Ok(RuntimeReport::new(process.state(), records))
+    Ok(RuntimeReport::new(
+        process.id().to_string(),
+        process.state(),
+        records,
+    ))
 }
 
 #[cfg(test)]
@@ -41,6 +45,7 @@ mod tests {
         let report = run_agent_loop(&mut agent, 3).expect("runtime should run");
 
         assert_eq!(report.step_count(), 3);
+        assert_eq!(report.agent_id, "researcher");
         assert_eq!(report.steps[0].step_number, 1);
         assert_eq!(report.steps[2].step_number, 3);
         assert_eq!(report.final_state, AgentState::Done);
