@@ -8,7 +8,7 @@ pub fn format_step_trace(records: &[StepRecord]) -> Vec<String> {
             let phases = record
                 .phases
                 .iter()
-                .map(format_phase)
+                .map(|output| format_phase(&output.phase))
                 .collect::<Vec<_>>()
                 .join(" -> ");
 

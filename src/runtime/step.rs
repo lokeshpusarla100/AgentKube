@@ -1,3 +1,5 @@
+use super::PhaseOutput;
+
 // One fake agent step follows the ReAct shape: perceive, reason, act.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum StepPhase {
@@ -9,15 +11,19 @@ pub enum StepPhase {
 // StepRecord lets the runtime report what happened in one loop cycle.
 #[derive(Debug, PartialEq, Eq)]
 pub struct StepRecord {
-    pub step_number: u32,        // 1-based step number
-    pub phases: Vec<StepPhase>,  // phases executed in order
+    pub step_number: u32,             // 1-based step number
+    pub phases: Vec<PhaseOutput>,     // phase outputs in order
 }
 
 impl StepRecord {
     pub fn new(step_number: u32) -> Self {
         Self {
             step_number,
-            phases: vec![StepPhase::Perceive, StepPhase::Reason, StepPhase::Act],
+            phases: vec![
+                PhaseOutput::new(StepPhase::Perceive, "gathered runtime context"),
+                PhaseOutput::new(StepPhase::Reason, "selected next action"),
+                PhaseOutput::new(StepPhase::Act, "executed selected action"),
+            ],
         }
     }
 }
@@ -32,9 +38,8 @@ mod tests {
         let record = StepRecord::new(1);
 
         assert_eq!(record.step_number, 1);
-        assert_eq!(
-            record.phases,
-            vec![StepPhase::Perceive, StepPhase::Reason, StepPhase::Act]
-        );
+        assert_eq!(record.phases[0].phase, StepPhase::Perceive);
+        assert_eq!(record.phases[1].phase, StepPhase::Reason);
+        assert_eq!(record.phases[2].phase, StepPhase::Act);
     }
 }

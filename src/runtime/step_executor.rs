@@ -4,7 +4,7 @@ use super::{StepRecord, act, perceive, reason};
 pub fn execute_step(step_number: u32) -> StepRecord {
     StepRecord {
         step_number,
-        phases: vec![perceive().phase, reason().phase, act().phase],
+        phases: vec![perceive(), reason(), act()],
     }
 }
 
@@ -19,9 +19,8 @@ mod tests {
         let record = execute_step(1);
 
         assert_eq!(record.step_number, 1);
-        assert_eq!(
-            record.phases,
-            vec![StepPhase::Perceive, StepPhase::Reason, StepPhase::Act]
-        );
+        assert_eq!(record.phases[0].phase, StepPhase::Perceive);
+        assert_eq!(record.phases[1].phase, StepPhase::Reason);
+        assert_eq!(record.phases[2].phase, StepPhase::Act);
     }
 }
