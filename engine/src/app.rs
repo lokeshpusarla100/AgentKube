@@ -9,7 +9,7 @@ use crate::runtime::{RuntimeError, RuntimeReport, format_step_trace, run_agent_l
 pub enum AppError {
     Config(ConfigError),
     Process(ProcessError),
-    Lifecycle(String),
+    Lifecycle(String),asdfasdf
     Runtime(RuntimeError),
 }
 
