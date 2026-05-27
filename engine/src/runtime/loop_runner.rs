@@ -3,7 +3,7 @@ use crate::process::{AgentProcess, AgentState};
 use super::{RuntimeError, RuntimeReport, execute_step};
 
 // Runs a deterministic fake loop before real LLM/tool logic exists.
-pub fn run_agent_loop(
+pub async fn run_agent_loop(
     process: &mut AgentProcess,
     max_steps: u32,
 ) -> Result<RuntimeReport, RuntimeError> {
@@ -38,11 +38,11 @@ mod tests {
     use crate::runtime::RuntimeError;
     use crate::test_support::config_factory::{running_agent, test_config};
 
-    #[test]
-    fn runs_three_steps_and_completes_process() {
+    #[tokio::test]
+    async fn runs_three_steps_and_completes_process() {
         let mut agent = running_agent();
 
-        let report = run_agent_loop(&mut agent, 3).expect("runtime should run");
+        let report = run_agent_loop(&mut agent, 3).await.expect("runtime should run");
 
         assert_eq!(report.step_count(), 3);
         assert_eq!(report.agent_id, "researcher");
@@ -52,21 +52,21 @@ mod tests {
         assert_eq!(agent.state(), AgentState::Done);
     }
 
-    #[test]
-    fn rejects_zero_steps() {
+    #[tokio::test]
+    async fn rejects_zero_steps() {
         let mut agent = running_agent();
 
-        let result = run_agent_loop(&mut agent, 0);
+        let result = run_agent_loop(&mut agent, 0).await;
 
         assert_eq!(result, Err(RuntimeError::InvalidStepLimit));
         assert_eq!(agent.state(), AgentState::Running);
     }
 
-    #[test]
-    fn rejects_process_that_is_not_running() {
+    #[tokio::test]
+    async fn rejects_process_that_is_not_running() {
         let mut agent = AgentProcess::from_config(test_config()).expect("config should be valid");
 
-        let result = run_agent_loop(&mut agent, 3);
+        let result = run_agent_loop(&mut agent, 3).await;
 
         assert_eq!(result, Err(RuntimeError::ProcessNotRunning));
         assert_eq!(agent.state(), AgentState::Loading);

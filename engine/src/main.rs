@@ -11,8 +11,9 @@ pub mod runtime;
 pub mod test_support;
 
 // Later this will start the gRPC server and engine runtime.
-fn main() {
-    if let Err(error) = app::run_default_agent() {
+#[tokio::main]
+async fn main() {
+    if let Err(error) = app::run_default_agent().await {
         eprintln!("engine failed: {:?}", error);
         std::process::exit(1);
     }

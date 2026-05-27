@@ -20,7 +20,7 @@ pub fn load_process_from_file(path: &Path) -> Result<AgentProcess, AppError> {
 }
 
 // Runs one agent file through the current engine path.
-pub fn run_agent_file(path: &Path) -> Result<RuntimeReport, AppError> {
+pub async fn run_agent_file(path: &Path) -> Result<RuntimeReport, AppError> {
     let mut process = load_process_from_file(path)?;
 
     process.load().map_err(AppError::Lifecycle)?;
@@ -28,13 +28,13 @@ pub fn run_agent_file(path: &Path) -> Result<RuntimeReport, AppError> {
 
     let max_steps = process.config().spec.resources.max_steps_per_task;
 
-    run_agent_loop(&mut process, max_steps).map_err(AppError::Runtime)
+    run_agent_loop(&mut process, max_steps).await.map_err(AppError::Runtime)
 }
 
 // Default local run used by cargo run.
-pub fn run_default_agent() -> Result<(), AppError> {
+pub async fn run_default_agent() -> Result<(), AppError> {
     let path = Path::new("../examples/agents/researcher.yaml");
-    let report = run_agent_file(path)?;
+    let report = run_agent_file(path).await?;
 
     for line in format_step_trace(&report.steps) {
         println!("{}", line);
@@ -92,8 +92,8 @@ spec:
         assert_eq!(process.state(), AgentState::Loading);
     }
 
-    #[test]
-    fn runs_agent_file_to_completion() {
+    #[tokio::test]
+    async fn runs_agent_file_to_completion() {
         let path = std::env::temp_dir().join("agentkube-app-run-test.yaml");
         fs::write(
             &path,
@@ -118,7 +118,7 @@ spec:
         )
         .expect("test file should be written");
 
-        let report = run_agent_file(&path).expect("agent file should run");
+        let report = run_agent_file(&path).await.expect("agent file should run");
 
         fs::remove_file(&path).expect("test file should be removed");
 
