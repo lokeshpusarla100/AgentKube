@@ -1,0 +1,20 @@
+api_version: agentkube/v1
+kind: Agent
+metadata:
+  name: researcher
+spec:
+  model: gemini-flash
+  system_prompt: |
+    You are a research agent. Given a topic, find useful information
+    and produce structured findings with sources.
+  tools:
+    - web_search
+    - file_read
+  resources:
+    max_memory: 50MB
+    max_tokens_per_task: 5000
+    max_steps_per_task: 3
+    timeout_per_step: 30s
+    timeout_per_task: 300s
+  restart_policy: on_failure
+  max_restarts: 3

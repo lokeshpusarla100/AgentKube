@@ -1,1 +1,26 @@
-/target
+# Rust
+/engine/target/
+**/*.rs.bk
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+.venv/
+venv/
+.env
+
+# Java / Spring Boot
+target/
+!.mvn/wrapper/maven-wrapper.jar
+!**/src/main/**/target/
+!**/src/test/**/target/
+*.class
+*.jar
+*.war
+
+# IDEs and OS
+.idea/
+.vscode/
+*.swp
+.DS_Store
