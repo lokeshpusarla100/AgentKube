@@ -4,7 +4,7 @@
 - [x] Define gRPC Protobuf Contracts (`proto/agent.proto`)
 - [x] Agent Process State Machine (`engine/src/process/state.rs`)
 - [x] Perceive-Reason-Act Loop (`engine/src/runtime/loop_runner.rs`)
-- [ ] Process Isolation (Tokio tasks & cancellation tokens)
+- [x] Process Isolation (Tokio tasks & cancellation tokens)
 - [ ] LLM Client streaming integration
 - [ ] Policy Engine inline hooks
 

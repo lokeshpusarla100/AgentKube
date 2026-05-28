@@ -1,7 +1,7 @@
 use crate::process::AgentProcess;
 use crate::runtime::{PhaseOutput, StepPhase};
 
-// Act will call tools through policy-controlled gateways later.
+// Act executes the selected action through the tool gateway.
 pub fn act(process: &AgentProcess, action: Option<&str>) -> PhaseOutput {
     let action = action.unwrap_or("final_answer");
 

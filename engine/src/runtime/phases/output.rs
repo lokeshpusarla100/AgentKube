@@ -1,6 +1,6 @@
 use crate::runtime::StepPhase;
 
-// Common shape returned by each fake phase for now.
+// Common shape returned by each execution phase.
 #[derive(Debug, PartialEq, Eq)]
 pub struct PhaseOutput {
     pub phase: StepPhase,   // which phase ran

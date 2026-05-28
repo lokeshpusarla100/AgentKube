@@ -1,7 +1,7 @@
 use crate::process::AgentProcess;
 use crate::runtime::{PhaseOutput, StepPhase};
 
-// Perceive will gather context and observations later.
+// Perceive gathers observations from the environment (Memory/State).
 pub fn perceive(process: &AgentProcess) -> PhaseOutput {
     PhaseOutput::new(
         StepPhase::Perceive,

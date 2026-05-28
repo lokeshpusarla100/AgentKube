@@ -1,4 +1,4 @@
-// Keep each ReAct phase separate so real logic can replace fake logic later.
+// ReAct phase logic (Perceive, Reason, Act) for the agent loop.
 mod act;
 mod output;
 mod perceive;

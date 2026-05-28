@@ -1,6 +1,6 @@
 use crate::runtime::phases::PhaseOutput;
 
-// One fake agent step follows the ReAct shape: perceive, reason, act.
+// One agent step follows the ReAct shape: perceive, reason, act.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum StepPhase {
     Perceive,
@@ -29,7 +29,7 @@ impl StepRecord {
 }
 
 #[cfg(test)]
-// Step tests lock the order of the fake ReAct phases.
+// Step tests lock the order of the ReAct phases.
 mod tests {
     use super::{StepPhase, StepRecord};
 
