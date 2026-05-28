@@ -2,7 +2,7 @@ use std::path::Path;
 
 use crate::config::{ConfigError, load_agent_config_from_file};
 use crate::process::{AgentProcess, ProcessError};
-use crate::runtime::{RuntimeError, RuntimeReport, format_step_trace, run_agent_loop};
+use crate::runtime::{MockClient, RuntimeError, RuntimeReport, format_step_trace, run_agent_loop};
 
 // App-level errors keep startup failures readable.
 #[derive(Debug, PartialEq)]
@@ -27,8 +27,10 @@ pub async fn run_agent_file(path: &Path) -> Result<RuntimeReport, AppError> {
     process.start().map_err(AppError::Lifecycle)?;
 
     let max_steps = process.config().spec.resources.max_steps_per_task;
+    let token = tokio_util::sync::CancellationToken::new();
+    let client = MockClient { response: "I will use the provided tools to fulfill the request.".to_string() };
 
-    run_agent_loop(&mut process, max_steps).await.map_err(AppError::Runtime)
+    run_agent_loop(&mut process, max_steps, token, &client).await.map_err(AppError::Runtime)
 }
 
 // Default local run used by cargo run.

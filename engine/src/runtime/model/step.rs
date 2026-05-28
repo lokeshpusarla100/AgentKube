@@ -1,4 +1,4 @@
-use super::PhaseOutput;
+use crate::runtime::phases::PhaseOutput;
 
 // One fake agent step follows the ReAct shape: perceive, reason, act.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

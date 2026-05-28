@@ -1,11 +1,17 @@
 use crate::process::AgentProcess;
+use crate::runtime::{AgentClient, StepRecord, act, perceive, reason};
 
-use super::{StepRecord, act, perceive, reason};
-
-// Executes one fake ReAct step until real phase logic exists.
-pub fn execute_step(process: &AgentProcess, step_number: u32) -> StepRecord {
+// Executes one ReAct step using the provided LLM client.
+pub async fn execute_step<C: AgentClient>(
+    process: &AgentProcess,
+    step_number: u32,
+    client: &C,
+) -> StepRecord {
     let perceive_output = perceive(process);
-    let reason_output = reason(process);
+    
+    // The Reasoning phase now uses the real LLM client.
+    let reason_output = reason(process, client).await;
+    
     let act_output = act(process, reason_output.action.as_deref());
 
     StepRecord {
@@ -15,16 +21,16 @@ pub fn execute_step(process: &AgentProcess, step_number: u32) -> StepRecord {
 }
 
 #[cfg(test)]
-// Step executor tests keep one-step behavior separate from loop behavior.
 mod tests {
     use super::execute_step;
-    use crate::runtime::StepPhase;
+    use crate::runtime::{MockClient, StepPhase};
 
-    #[test]
-    fn executes_one_react_step() {
+    #[tokio::test]
+    async fn executes_one_react_step() {
         let agent = crate::test_support::config_factory::running_agent();
+        let client = MockClient { response: "think".to_string() };
 
-        let record = execute_step(&agent, 1);
+        let record = execute_step(&agent, 1, &client).await;
 
         assert_eq!(record.step_number, 1);
         assert_eq!(record.phases[0].phase, StepPhase::Perceive);

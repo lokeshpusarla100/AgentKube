@@ -1,16 +1,14 @@
-// Runtime owns what happens while an agent is Running.
-mod error;
-mod loop_runner;
-mod phases;
-mod report;
-mod step;
-mod step_executor;
-mod trace;
+// Runtime sub-modules organized by responsibility.
+pub mod client;
+pub mod execution;
+pub mod model;
+pub mod phases;
 
+mod error;
+
+// Re-export core types for a clean public API.
+pub use client::{AgentClient, ClientError, MockClient};
 pub use error::RuntimeError;
-pub use loop_runner::run_agent_loop;
-pub use phases::{PhaseOutput, act, perceive, reason};
-pub use report::RuntimeReport;
-pub use step::{StepPhase, StepRecord};
-pub use step_executor::execute_step;
-pub use trace::format_step_trace;
+pub use execution::{run_agent_loop, spawn_agent_loop, execute_step};
+pub use model::{RuntimeReport, StepPhase, StepRecord, format_step_trace};
+pub use phases::{act, perceive, reason, PhaseOutput};
