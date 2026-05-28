@@ -4,4 +4,5 @@ pub enum RuntimeError {
     InvalidStepLimit,
     ProcessNotRunning,
     Lifecycle(String),
+    Terminated,
 }

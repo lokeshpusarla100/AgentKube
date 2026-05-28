@@ -1,6 +1,23 @@
+use tokio::task::JoinHandle;
+use tokio_util::sync::CancellationToken;
+
 use crate::process::{AgentProcess, AgentState};
 
 use super::{RuntimeError, RuntimeReport, execute_step};
+
+// Spawns the loop into a background task with a cancellation token for isolation.
+pub fn spawn_agent_loop(
+    mut process: AgentProcess,
+    max_steps: u32,
+    token: CancellationToken,
+) -> JoinHandle<Result<RuntimeReport, RuntimeError>> {
+    tokio::spawn(async move {
+        tokio::select! {
+            _ = token.cancelled() => Err(RuntimeError::Terminated),
+            res = run_agent_loop(&mut process, max_steps) => res,
+        }
+    })
+}
 
 // Runs a deterministic fake loop before real LLM/tool logic exists.
 pub async fn run_agent_loop(
@@ -33,10 +50,25 @@ pub async fn run_agent_loop(
 #[cfg(test)]
 // Runtime tests prove execution only happens in Running state.
 mod tests {
-    use super::run_agent_loop;
+    use super::{run_agent_loop, spawn_agent_loop};
+    use tokio_util::sync::CancellationToken;
     use crate::process::{AgentProcess, AgentState};
     use crate::runtime::RuntimeError;
     use crate::test_support::config_factory::{running_agent, test_config};
+
+    #[tokio::test]
+    async fn cancels_loop_via_token() {
+        let agent = running_agent();
+        let token = CancellationToken::new();
+
+        // Cancel immediately.
+        token.cancel();
+
+        let handle = spawn_agent_loop(agent, 3, token);
+        let result = handle.await.expect("task should join");
+
+        assert_eq!(result, Err(RuntimeError::Terminated));
+    }
 
     #[tokio::test]
     async fn runs_three_steps_and_completes_process() {
