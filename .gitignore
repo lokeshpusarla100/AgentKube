@@ -1,5 +1,7 @@
 # Workspace instructions
 agent_isntructions.md
+"AgentKube Build Plan Markdown - Google Gemini.pdf"
+*.pdf
 
 # Rust
 /engine/target/
