@@ -1,3 +1,6 @@
+# Workspace instructions
+agent_isntructions.md
+
 # Rust
 /engine/target/
 **/*.rs.bk
