@@ -4,7 +4,6 @@ import tools.jackson.databind.JsonNode;
 import com.networknt.schema.Schema;
 import com.networknt.schema.SchemaRegistry;
 import com.networknt.schema.SpecificationVersion;
-import com.networknt.schema.Error;
 import com.networknt.schema.OutputFormat;
 import org.springframework.stereotype.Component;
 

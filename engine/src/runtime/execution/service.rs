@@ -7,7 +7,7 @@ use tokio_util::sync::CancellationToken;
 use tonic::{Request, Response, Status};
 
 use crate::app::load_process_from_file;
-use crate::runtime::{MockClient, spawn_agent_loop};
+use crate::runtime::{MockClient, MockToolGateway, ToolExecutionResult, spawn_agent_loop};
 use crate::runtime::model::agent_proto::{
     agent_service_server::AgentService,
     StartAgentRequest, StartAgentResponse,
@@ -20,6 +20,8 @@ pub struct AgentServiceImpl {
     active_agents: DashMap<String, CancellationToken>,
     // Shared LLM client used by all agents spawned by this service.
     client: Arc<MockClient>,
+    // Shared Tool Gateway used by all agents to execute tools.
+    gateway: Arc<MockToolGateway>,
 }
 
 impl Default for AgentServiceImpl {
@@ -28,6 +30,13 @@ impl Default for AgentServiceImpl {
             active_agents: DashMap::new(),
             client: Arc::new(MockClient {
                 response: "I will use the provided tools to fulfill the request.".to_string(),
+            }),
+            gateway: Arc::new(MockToolGateway {
+                result: ToolExecutionResult {
+                    success: true,
+                    output: "Mock result from AgentService".to_string(),
+                    errors: vec![],
+                },
             }),
         }
     }
@@ -65,10 +74,11 @@ impl AgentService for AgentServiceImpl {
         // 5. Spawn the background execution task.
         let max_steps = req.max_steps.max(process.config().spec.resources.max_steps_per_task);
         let client_ref = self.client.clone();
+        let gateway_ref = self.gateway.clone();
         let agents_map_ref = self.active_agents.clone();
         let id_for_cleanup = agent_id.clone();
 
-        spawn_agent_loop(process, max_steps, token, client_ref);
+        spawn_agent_loop(process, max_steps, token, client_ref, gateway_ref);
 
         // 6. Spawn a "garbage collector" task to clean up the map when done.
         tokio::spawn(async move {

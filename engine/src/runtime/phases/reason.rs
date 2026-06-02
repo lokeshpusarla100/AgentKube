@@ -25,7 +25,6 @@ pub async fn reason<C: AgentClient>(process: &AgentProcess, client: &C) -> Phase
         StepPhase::Reason,
         format!("{}: {} (via {})", response, action, model),
         action,
-        "",
     )
 }
 
