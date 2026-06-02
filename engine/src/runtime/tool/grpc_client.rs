@@ -15,6 +15,7 @@ pub struct GrpcToolClient {
     client: Mutex<ToolGatewayServiceClient<Channel>>,
 }
 
+
 impl GrpcToolClient {
     // Opens a gRPC connection to the Java tool gateway.
     pub async fn connect(endpoint: &str) -> Result<Self, ToolGatewayError> {
@@ -27,6 +28,7 @@ impl GrpcToolClient {
         })
     }
 }
+
 
 #[async_trait]
 impl ToolGateway for GrpcToolClient {
@@ -55,7 +57,9 @@ fn to_proto_request(request: ToolRequest) -> ProtoToolExecutionRequest {
 // Converts protobuf tool results into engine tool results.
 fn from_proto_result(result: ProtoToolExecutionResult) -> ToolExecutionResult {
     ToolExecutionResult {
+        success: result.success,
         output: result.output,
+        errors: result.errors,
     }
 }
 
@@ -86,7 +90,7 @@ mod tests {
             errors: vec![],
         };
 
-        let result = from_proto_result(proto);
+        let result: ToolExecutionResult = from_proto_result(proto);
 
         assert_eq!(result.output, "{\"results\":[]}");
     }

@@ -28,7 +28,9 @@ mod tests {
     async fn mock_gateway_returns_configured_result() {
         let gateway = MockToolGateway {
             result: ToolExecutionResult {
+                success: true,
                 output: "tool output".to_string(),
+                errors: vec![],
             },
         };
         let request = ToolRequest {
