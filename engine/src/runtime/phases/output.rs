@@ -6,6 +6,7 @@ pub struct PhaseOutput {
     pub phase: StepPhase,   // which phase ran
     pub summary: String,    // short trace message
     pub action: Option<String>, // action selected by Reason
+    pub tool_output: Option<String>, // output from tool execution
 }
 
 impl PhaseOutput {
@@ -14,6 +15,7 @@ impl PhaseOutput {
             phase,
             summary: summary.into(),
             action: None,
+            tool_output: None,  
         }
     }
 
@@ -21,11 +23,13 @@ impl PhaseOutput {
         phase: StepPhase,
         summary: impl Into<String>,
         action: impl Into<String>,
+        tool_output: impl Into<String>,
     ) -> Self {
         Self {
             phase,
             summary: summary.into(),
             action: Some(action.into()),
+            tool_output: Some(tool_output.into()),
         }
     }
 }
@@ -46,7 +50,7 @@ mod tests {
 
     #[test]
     fn creates_phase_output_with_action() {
-        let output = PhaseOutput::with_action(StepPhase::Reason, "selected action", "web_search");
+        let output = PhaseOutput::with_action(StepPhase::Reason, "selected action", "web_search", "");
 
         assert_eq!(output.phase, StepPhase::Reason);
         assert_eq!(output.action, Some("web_search".to_string()));
