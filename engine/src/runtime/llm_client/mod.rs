@@ -1,16 +1,19 @@
 use async_trait::async_trait;
 
+// Errors the LLM client can return to the engine.
 #[derive(Debug, PartialEq)]
 pub enum ClientError {
     ApiError(String),
     Timeout,
 }
 
+// Boundary between the engine and any LLM provider.
 #[async_trait]
 pub trait AgentClient: Send + Sync {
     async fn prompt(&self, system_prompt: &str, user_message: &str) -> Result<String, ClientError>;
 }
 
+// Test client that returns a fixed model response.
 pub struct MockClient {
     pub response: String,
 }
@@ -26,6 +29,7 @@ impl AgentClient for MockClient {
 mod tests {
     use super::*;
 
+    // Proves the mock client returns the response we configured.
     #[tokio::test]
     async fn mock_client_returns_configured_response() {
         let client = MockClient {

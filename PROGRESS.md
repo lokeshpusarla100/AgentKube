@@ -4,22 +4,72 @@
 ## 🛠 Current Focus: Architectural Plumbing
 We are currently working across Phase 1 and Phase 2 because the **Execution Engine (Rust)** cannot complete a full ReAct loop without the **Tool Gateway (Java)**. The Engine handles the "brain," but the Gateway handles the "hands" (tool execution).
 
+The current milestone is to make the Act phase real. The Rust Engine already has the loop shape, but tool execution is still not wired into that loop. We are building the boundary that lets Rust ask Java to run a tool without Rust knowing how that tool works.
+
+## Current Architecture Checkpoint
+The project now has a shared tool execution contract in `proto/agent.proto`. That contract defines `ToolGatewayService.ExecuteTool`, `ToolExecutionRequest`, and `ToolExecutionResult`.
+
+The request shape is intentionally small: `agent_id`, `tool_name`, and `input_json`. The `agent_id` gives us room for rate limits, permissions, and audit logs. The `tool_name` tells the gateway which registered tool to use. The `input_json` carries tool-specific arguments without changing the proto for every new tool.
+
+The result shape is `success`, `output`, and `errors`. This matches the Java-side `ToolExecutionResult` model and gives the engine a simple way to record either a successful tool response or validation/execution failures.
+
+On the Rust side, `runtime/tool` now owns the tool boundary. `ToolGateway` is the trait the engine will call. `MockToolGateway` lets tests run without Java. `GrpcToolClient` is the real network client skeleton that uses tonic-generated protobuf types.
+
+The old generic `runtime/client` folder was renamed to `runtime/llm_client` so the codebase is clearer. LLM calls and tool calls are different boundaries, so they should not share one vague client name.
+
+Engine infrastructure config now lives in `examples/engine.yaml`. This is where the Java Gateway endpoint belongs because it describes infrastructure, not a specific agent.
+
 ## Phase 1: Agent Execution Engine (In Progress)
 - [x] Define gRPC Protobuf Contracts (`proto/agent.proto`)
+  The proto now includes both agent-control RPCs and the tool-execution RPC. Rust generation through `tonic_build` compiles successfully.
 - [x] Agent Process State Machine (`engine/src/process/state.rs`)
+  Agent lifecycle states and allowed transitions are covered by tests.
 - [x] Perceive-Reason-Act (ReAct) Loop implementation
+  The loop runs through perceive, reason, and act phases, but Act still uses stub behavior.
 - [x] Process Isolation via Tokio tasks & cancellation tokens
+  Agent loops can be spawned and cancelled through Tokio task handles and cancellation tokens.
 - [x] Traited LLM Client (`AgentClient`) for provider abstraction
+  The LLM boundary now lives under `runtime/llm_client`.
+- [x] Engine-level infrastructure config (`examples/engine.yaml`)
+  Engine config now stores `services.tool_gateway_endpoint`.
+- [x] Rust Tool Gateway boundary (`ToolGateway`, `MockToolGateway`)
+  The engine can depend on a trait instead of hardcoding Java or gRPC details.
+- [x] Rust gRPC Tool Gateway client skeleton (`GrpcToolClient`)
+  The client can connect to an endpoint and map Rust tool types to protobuf tool types.
 - [ ] LLM Streaming integration (reqwest/eventsource)
 - [ ] gRPC Service implementation (`AgentService`)
+- [ ] Wire Act phase to `ToolGateway`
+  This is the next Rust step. `act()` needs to become async and call the trait.
 - [ ] Real-time log streaming interface
 
 ## Phase 2: Tool Gateway Service (In Progress)
 - [x] Spring Boot Gateway Scaffolding
+  The Java service exists and tests run through Maven.
 - [x] Unified Tool Registry Interface
+  Tools can be registered and looked up by name.
 - [x] JSON Schema contract verification
+  Tool inputs are validated before execution.
+- [x] Tool execution gRPC contract (`ToolGatewayService`)
+  The shared proto contract exists, but Java has not implemented the gRPC server yet.
+- [ ] Java gRPC server implementation (`ExecuteTool`)
+  This is the next Java step. It should map proto request -> `ToolExecutionService` -> proto result.
 - [ ] Token-bucket rate limiting per agent class
 - [ ] Tool execution proxy (sandbox execution)
+
+## Current Integration Checkpoint
+- [x] Rust tests passing: 52 tests
+- [x] Tool call request shape: `agent_id`, `tool_name`, `input_json`
+- [x] Tool call result shape: `success`, `output`, `errors`
+- [x] Engine config shape: `services.tool_gateway_endpoint`
+- [x] Rust mapping tests for request/result protobuf conversion
+- [ ] Live Rust Engine -> Java Gateway gRPC call
+
+## Immediate Next Steps
+1. Wire `act()` to accept a `ToolGateway`.
+2. Update `execute_step()` to pass the gateway into the Act phase.
+3. Add tests using `MockToolGateway`.
+4. Implement Java `ExecuteTool` gRPC server.
+5. Run a live Rust -> Java tool call.
 
 ## Phase 3: Scheduler & Planning Service (Pending)
 - [ ] Python Planner Daemon (LLM-based DAG generation)

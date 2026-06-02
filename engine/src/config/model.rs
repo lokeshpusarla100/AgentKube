@@ -35,3 +35,17 @@ pub struct Resources {
     pub timeout_per_step: String,     // single loop timeout
     pub timeout_per_task: String,     // whole task timeout
 }
+
+// Full engine definition loaded from YAML.
+#[derive(Debug, Deserialize, PartialEq)]
+pub struct EngineConfig {
+    pub api_version: String,      // config contract version
+    pub kind: String,             // expected to be Engine
+    pub services: EngineServices, // external services the engine calls
+}
+
+// Network addresses for services outside the Rust engine.
+#[derive(Debug, Deserialize, PartialEq)]
+pub struct EngineServices {
+    pub tool_gateway_endpoint: String, // Java gateway gRPC address
+}

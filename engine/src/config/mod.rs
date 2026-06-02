@@ -7,7 +7,7 @@ mod validation;
 
 // Callers should not care how the config folder is split internally.
 pub use error::ConfigError;
-pub use loader::load_agent_config_from_file;
-pub use model::{AgentConfig, AgentSpec, Metadata, Resources};
-pub use parser::parse_agent_config;
-pub use validation::validate_agent_config;
+pub use loader::{load_agent_config_from_file, load_engine_config_from_file};
+pub use model::{AgentConfig, AgentSpec, EngineConfig, EngineServices, Metadata, Resources};
+pub use parser::{parse_agent_config, parse_engine_config};
+pub use validation::{validate_agent_config, validate_engine_config};

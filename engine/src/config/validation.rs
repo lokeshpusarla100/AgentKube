@@ -1,4 +1,4 @@
-use super::AgentConfig;
+use super::{AgentConfig, EngineConfig};
 
 // Blocks configs that would create broken or unsafe agent processes.
 pub fn validate_agent_config(config: &AgentConfig) -> Result<(), String> {
@@ -30,11 +30,28 @@ pub fn validate_agent_config(config: &AgentConfig) -> Result<(), String> {
     Ok(())
 }
 
+// Blocks engine configs that cannot connect to required services.
+pub fn validate_engine_config(config: &EngineConfig) -> Result<(), String> {
+    // The engine needs a gateway address before it can call tools.
+    if config.services.tool_gateway_endpoint.trim().is_empty() {
+        return Err("services.tool_gateway_endpoint cannot be empty".to_string());
+    }
+
+    // Tonic expects the endpoint to include the URL scheme.
+    if !config.services.tool_gateway_endpoint.starts_with("http://")
+        && !config.services.tool_gateway_endpoint.starts_with("https://")
+    {
+        return Err("services.tool_gateway_endpoint must start with http:// or https://".to_string());
+    }
+
+    Ok(())
+}
+
 #[cfg(test)]
 // Validation tests define the minimum safe config rules.
 mod tests {
-    use super::validate_agent_config;
-    use crate::config::{AgentConfig, AgentSpec, Metadata, Resources};
+    use super::{validate_agent_config, validate_engine_config};
+    use crate::config::{AgentConfig, AgentSpec, EngineConfig, EngineServices, Metadata, Resources};
 
     #[test]
     fn accepts_valid_config() {
@@ -79,6 +96,26 @@ mod tests {
         );
     }
 
+    #[test]
+    fn accepts_valid_engine_config() {
+        let config = test_engine_config();
+
+        assert!(validate_engine_config(&config).is_ok());
+    }
+
+    #[test]
+    fn rejects_engine_config_without_url_scheme() {
+        let mut config = test_engine_config();
+        config.services.tool_gateway_endpoint = "127.0.0.1:50051".to_string();
+
+        let result = validate_engine_config(&config);
+
+        assert_eq!(
+            result,
+            Err("services.tool_gateway_endpoint must start with http:// or https://".to_string())
+        );
+    }
+
     fn test_config() -> AgentConfig {
         AgentConfig {
             api_version: "agentkube/v1".to_string(),
@@ -99,6 +136,16 @@ mod tests {
                 },
                 restart_policy: "on_failure".to_string(),
                 max_restarts: 3,
+            },
+        }
+    }
+
+    fn test_engine_config() -> EngineConfig {
+        EngineConfig {
+            api_version: "agentkube/v1".to_string(),
+            kind: "Engine".to_string(),
+            services: EngineServices {
+                tool_gateway_endpoint: "http://127.0.0.1:50051".to_string(),
             },
         }
     }
