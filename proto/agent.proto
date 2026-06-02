@@ -14,6 +14,12 @@ service AgentService {
   rpc StreamAgent(StreamAgentRequest) returns (stream AgentStatusResponse);
 }
 
+// Service to execute tools for agents.
+service ToolGatewayService {
+  // Runs one tool call through the gateway.
+  rpc ExecuteTool(ToolExecutionRequest) returns (ToolExecutionResult);
+}
+
 message StartAgentRequest {
   string agent_id = 1;
   string user_message = 2;
@@ -41,4 +47,16 @@ message AgentStatusResponse {
   string agent_id = 1;
   string state = 2;
   string latest_output = 3;
+}
+
+message ToolExecutionRequest {
+  string agent_id = 1;
+  string tool_name = 2;
+  string input_json = 3;
+}
+
+message ToolExecutionResult {
+  bool success = 1;
+  string output = 2;
+  repeated string errors = 3;
 }

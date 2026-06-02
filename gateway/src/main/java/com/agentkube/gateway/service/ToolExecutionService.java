@@ -10,9 +10,7 @@ import org.springframework.stereotype.Service;
 import java.util.List;
 import java.util.Set;
 
-/**
- * Orchestrates the lookup, validation, and execution of agent tools.
- */
+// The main controller that finds, checks, and runs tools for our agents.
 @Service
 @RequiredArgsConstructor
 public class ToolExecutionService {

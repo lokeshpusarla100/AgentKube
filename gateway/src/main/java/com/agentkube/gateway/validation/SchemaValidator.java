@@ -11,9 +11,7 @@ import org.springframework.stereotype.Component;
 import java.util.Set;
 import java.util.stream.Collectors;
 
-/**
- * Validates tool parameters against their defined JSON Schemas using the 3.0.x API.
- */
+// A component that checks if the data sent by an agent matches the tool's requirements.
 @Component
 public class SchemaValidator {
     
