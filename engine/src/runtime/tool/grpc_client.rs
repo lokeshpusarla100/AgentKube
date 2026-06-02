@@ -92,6 +92,8 @@ mod tests {
 
         let result: ToolExecutionResult = from_proto_result(proto);
 
-        assert_eq!(result.output, "{\"results\":[]}");
+        assert_eq!(result.success, true);
+        assert_eq!(result.output, "{\"results\":[]}".to_string(),);
+        assert!(result.errors.is_empty());
     }
 }
