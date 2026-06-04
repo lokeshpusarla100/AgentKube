@@ -1,6 +1,7 @@
 package com.agentkube.gateway.service;
 
 import com.agentkube.gateway.model.ToolDefinition;
+import jakarta.annotation.PostConstruct;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
@@ -14,6 +15,16 @@ import java.util.concurrent.ConcurrentHashMap;
 public class ToolRegistryService {
 
     private final Map<String, ToolDefinition> tools = new ConcurrentHashMap<>();
+
+    @PostConstruct
+    public void init() {
+        // Register a basic calculator tool for integration testing.
+        registerTool(new ToolDefinition(
+            "calculator",
+            "Perform mathematical operations",
+            "{\"type\":\"object\",\"properties\":{\"expression\":{\"type\":\"string\"}},\"required\":[\"expression\"]}"
+        ));
+    }
 
     // Adds a new tool to the master registry.
     public void registerTool(ToolDefinition tool) {

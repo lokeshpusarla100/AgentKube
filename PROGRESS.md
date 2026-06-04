@@ -41,7 +41,8 @@ Engine infrastructure config now lives in `examples/engine.yaml`. This is where 
 - [x] Wire Act phase to `ToolGateway`
   The `act()` phase is now async and calls the gateway trait. `StepExecutor` and `LoopRunner` are updated to support this dependency.
 - [ ] LLM Streaming integration (reqwest/eventsource)
-- [ ] gRPC Service implementation (`AgentService`)
+- [x] gRPC Service implementation (`AgentService`)
+  Rust gRPC server for agent lifecycle management is implemented with `DashMap` and `CancellationToken`.
 - [ ] Real-time log streaming interface
 
 ## Phase 2: Tool Gateway Service (In Progress)
@@ -50,21 +51,19 @@ Engine infrastructure config now lives in `examples/engine.yaml`. This is where 
 - [x] Unified Tool Registry Interface
   Tools can be registered and looked up by name.
 - [x] JSON Schema contract verification
-  Tool inputs are validated before execution.
+  Tool inputs are validated before execution using Jackson 3 and NetworkNT.
 - [x] Tool execution gRPC contract (`ToolGatewayService`)
-  The shared proto contract exists, but Java has not implemented the gRPC server yet.
-- [ ] Java gRPC server implementation (`ExecuteTool`)
-  This is the next Java step. It should map proto request -> `ToolExecutionService` -> proto result.
+  Shared proto contract is implemented in both Rust and Java.
+- [x] Java gRPC server implementation (`ExecuteTool`)
+  Implemented `GrpcToolGatewayService` in Java to route requests to the `ToolExecutionService`.
 - [ ] Token-bucket rate limiting per agent class
 - [ ] Tool execution proxy (sandbox execution)
 
 ## Current Integration Checkpoint
 - [x] Rust tests passing: 54 tests
-- [x] Tool call request shape: `agent_id`, `tool_name`, `input_json`
-- [x] Tool call result shape: `success`, `output`, `errors`
-- [x] Engine config shape: `services.tool_gateway_endpoint`
-- [x] Rust mapping tests for request/result protobuf conversion
-- [x] Act phase wired to ToolGateway trait
+- [x] Java tests passing: 3 tests (Compilation Success)
+- [x] System Atlas Documentation: Detailed 26-step chronological roadmap completed.
+- [x] ADRs logged: 0012 (Async), 0013 (Arc), 0014 (Schema), 0015 (Jackson3), 0016 (Tokens).
 - [ ] Live Rust Engine -> Java Gateway gRPC call
 1. Wire `act()` to accept a `ToolGateway`.
 2. Update `execute_step()` to pass the gateway into the Act phase.

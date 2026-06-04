@@ -14,5 +14,6 @@ pub use llm_client::{AgentClient, ClientError, MockClient};
 pub use model::{RuntimeReport, StepPhase, StepRecord, format_step_trace};
 pub use phases::{act, perceive, reason, PhaseOutput};
 pub use tool::{
-    MockToolGateway, ToolExecutionResult, ToolGateway, ToolGatewayError, ToolRequest,
+    GrpcToolClient, MockToolGateway, ToolExecutionResult, ToolGateway, ToolGatewayError,
+    ToolRequest,
 };

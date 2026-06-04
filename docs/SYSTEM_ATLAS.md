@@ -42,7 +42,49 @@ flowchart TB
 
 ---
 
-## 2. The Shared Contract (Protobuf)
+## 2. Chronological Lifecycle: The 26-Step Execution Path
+
+This is the exact sequence of events from the moment a YAML file is submitted until the agent task completes.
+
+### Phase A: Configuration & Process Creation (Rust)
+1.  **`main.rs`**: Bootstraps the Tokio multi-threaded runtime and initializes the `AgentServiceImpl` gRPC server.
+2.  **`app.rs`**: `run_agent_file()` receives a filesystem path to an agent YAML (e.g., `researcher.yaml`).
+3.  **`loader.rs`**: `load_agent_config_from_file()` reads the raw bytes from the disk into a `String`.
+4.  **`parser.rs`**: `parse_agent_config()` uses `serde_yaml` to map the string into a structured `AgentConfig`.
+5.  **`validation.rs`**: `validate_agent_config()` enforces business rules (e.g., name cannot be empty, step budget must be > 0). Returns `ConfigError` if validation fails.
+6.  **`model.rs`**: Provides the structural definition for `AgentConfig` using `serde` derive macros for automated mapping.
+7.  **`agent.rs`**: `AgentProcess::from_config()` is called, creating the process object in the **`Loading`** state.
+8.  **`startup.rs`**: `load()` is called, triggering a transition from `Loading` to **`Ready`**.
+9.  **`startup.rs`**: `start()` is called, moving the state from `Ready` to **`Running`**, enabling resource consumption.
+
+### Phase B: Orchestration & Concurrency (Rust)
+10. **`service.rs`**: Implements the `AgentService` gRPC server. It instantiates the `CancellationToken` for task isolation.
+11. **`loop_runner.rs`**: `spawn_agent_loop()` creates a brand new `tokio` thread task (Green Thread) to isolate this agent from others.
+12. **`loop_runner.rs`**: `run_agent_loop()` begins. It creates a bounded loop that will run for exactly `max_steps`.
+13. **`loop_runner.rs`**: Checks the `CancellationToken` via `token.is_cancelled()` at the start of every iteration for O(1) shutdown.
+
+### Phase C: The ReAct Execution Loop (Rust)
+14. **`step_executor.rs`**: `execute_step()` is called to coordinate the three sub-phases of a single ReAct step.
+15. **`perceive.rs`**: Gathers system logs, environment variables, and memory context. Returns a `PhaseOutput`.
+16. **`reason.rs`**: Interfaces with the `AgentClient` (LLM). Parses the prompt response and returns the target tool choice.
+17. **`act.rs`**: Resolves `action: Option<String>`. If `Some`, it constructs a binary `ToolRequest` with a placeholder JSON input.
+18. **`grpc_client.rs`**: Acquires a `Mutex` lock on the tonic channel to satisfy mutability requirements and fires the request over HTTP/2.
+
+### Phase D: Tool Execution & Validation (Java)
+19. **Java Netty**: Receives the binary blob and routes it to the `ExecuteTool` RPC implementation based on the Protobuf method descriptor.
+20. **`GrpcToolGatewayService.java`**: Receives the request and extracts the `input_json` string.
+21. **Jackson 3**: `objectMapper.readTree()` converts the raw string into a structured `JsonNode` (the AST).
+22. **`ToolExecutionService.java`**: Receives the `JsonNode` and coordinates the routing between the registry and validator.
+23. **`ToolRegistryService.java`**: Looks up the tool definition and retrieves the specific JSON Schema for the "calculator".
+24. **`SchemaValidator.java`**: Compiles the schema into an executable graph and traverses the `JsonNode` AST for validation errors.
+25. **`GrpcToolGatewayService.java`**: Maps the internal result record into a `ToolExecutionResult` Protobuf message and sends it back to Rust.
+
+### Phase E: Response & Termination (Rust)
+26. **`termination.rs`**: Once the loop budget is exhausted or a final answer is reached, `complete()` is called, moving the agent to **`Done`** and freeing the Tokio task.
+
+---
+
+## 3. The Shared Contract (Protobuf)
 
 ### `proto/agent.proto`
 The absolute source of truth for cross-process communication. 
@@ -57,21 +99,19 @@ The absolute source of truth for cross-process communication.
 
 ---
 
-## 3. The Rust Execution Engine: Architecture & Concurrency
+## 4. The Rust Execution Engine: Architecture
 
-The Rust engine utilizes the `tokio` runtime to manage thousands of lightweight tasks over a small thread pool. It enforces strict state machine transitions and relies on `Arc` (Atomically Reference Counted) pointers to share I/O resources safely across thread boundaries.
-
-### 3.1 Core Agent State Machine
-
-Agents operate within a rigid Finite State Machine defined in `engine/src/process/state.rs`.
+### 4.1 Core Agent State Machine
+Defined in `engine/src/process/state.rs`.
 
 ```mermaid
 stateDiagram-v2
-    [*] --> Loading : App initialized
-    Loading --> Running : process.start()
-    Running --> Done : process.complete()
-    Loading --> Error : config/schema failure
-    Running --> Error : Runtime panic/timeout
+    [*] --> Loading : [Step 1-7] YAML Loaded
+    Loading --> Ready : [Step 8] load()
+    Ready --> Running : [Step 9] start()
+    Running --> Done : [Step 26] complete()
+    Loading --> Error : Config Invalid
+    Running --> Error : Runtime Failure
     Done --> [*]
     Error --> [*]
     
@@ -81,7 +121,7 @@ stateDiagram-v2
     end note
 ```
 
-### 3.2 Memory & Concurrency Model
+### 4.2 Memory & Concurrency Model
 
 ```mermaid
 flowchart TD
@@ -118,38 +158,36 @@ flowchart TD
     end
 ```
 
-### 3.3 File-by-File Breakdown: Rust
+### 4.3 Detailed File Responsibilities: Rust
 
 #### Core & Process (`engine/src/process/`)
-- **`app.rs`**: The high-level file loader. Maps YAML to `AgentProcess`. Instantiates `CancellationToken` and invokes `run_agent_loop`.
-- **`state.rs`**: Implements the `AgentState` enum and transition logic. Enforces mutability rules preventing execution outside the `Running` state.
-- **`agent.rs`**: Encapsulates `AgentConfig` and `AgentState`. Acts as the mutable context passed through the loop.
+- **`app.rs`**: Entrypoint for file-based runs. Triggers the 26-step path by mapping YAML to the `AgentProcess` and initiating the Tokio loop spawner.
+- **`state.rs`**: Implements the `AgentState` enum and `is_valid_transition` logic. Acts as the system-wide guard for lifecycle movement.
+- **`agent.rs`**: The primary data structure. Encapsulates `AgentConfig` and `AgentState`. Config is immutable; State is mutable via transition logic.
+- **`lifecycle/*`**: Logic for `startup.rs` (load/start) and `termination.rs` (complete/fail), and `control.rs` (pause/resume).
 
 #### Execution Runtime (`engine/src/runtime/execution/`)
-- **`service.rs`**: Implements `AgentService` via `#[tonic::async_trait]`. 
-  - Uses `DashMap<String, CancellationToken>` for lock-free concurrent map operations, enabling O(1) agent termination via `stop_agent`.
-  - Distributes `Arc<MockClient>` and `Arc<GrpcToolClient>` to `tokio::spawn` closures to satisfy `'static` lifetime bounds without deep copying connections.
-- **`loop_runner.rs`**: Orchestrates `spawn_agent_loop` and `run_agent_loop`. Uses a `tokio::select!` macro to race the execution loop against `token.cancelled()`, ensuring immediate teardown upon `StopAgent` requests.
-- **`step_executor.rs`**: Awaits `perceive()`, `reason()`, and `act()` sequentially. Aggregates the resulting `PhaseOutput` structs into a `StepRecord`.
+- **`service.rs`**: Implements `AgentService` gRPC server via `#[tonic::async_trait]`. 
+  - Uses `DashMap<String, CancellationToken>` for lock-free concurrent map operations, enabling O(1) agent termination.
+  - Distributes `Arc<MockClient>` and `Arc<GrpcToolClient>` to `tokio::spawn` tasks to satisfy `'static` lifetime bounds without cloning underlying connections.
+- **`loop_runner.rs`**: Manages the life of the agent task. Uses a `tokio::select!` macro to race the loop against `token.cancelled()`, ensuring zero-latency teardown.
+- **`step_executor.rs`**: The conductor of the ReAct cycle. Sequentially awaits `perceive()`, `reason()`, and `act()`, bundling their outputs into a `StepRecord`.
 
-#### The ReAct Phases (`engine/src/runtime/phases/`)
-- **`output.rs`**: Defines `PhaseOutput`. Employs specialized constructors to enforce invariants:
-  - `new()`: Perceive phase. `action` = None, `tool_output` = None.
-  - `with_action()`: Reason phase. `action` = Some, `tool_output` = None.
-  - `with_tool_output()`: Act phase. `action` = None, `tool_output` = Some.
-- **`reason.rs`**: Interfaces with the LLM via `AgentClient` trait. Extracts the target tool.
-- **`act.rs`**: Resolves `action: Option<String>`. If `None`, halts execution. If `Some`, builds `ToolRequest`, `.await`s the `ToolGateway`, and handles `Result<ToolExecutionResult, ToolGatewayError>`.
+#### ReAct Phases (`engine/src/runtime/phases/`)
+- **`output.rs`**: Defines `PhaseOutput`. Employs specialized constructors (`new`, `with_action`, `with_tool_output`) to enforce data tracking integrity. Uses `Option<String>` to differentiate between no tool run (`None`), empty result (`Some("")`), and actual data.
+- **`reason.rs`**: Interacts with `AgentClient`. Generates logs like `thought: ... (via gemini-flash)`.
+- **`act.rs`**: The network orchestrator. Builds the `ToolRequest`, calls the gateway, and maps network errors into the `PhaseOutput`.
 
 #### Tool Boundary (`engine/src/runtime/tool/`)
-- **`gateway.rs`**: Exposes `async trait ToolGateway : Send + Sync`.
-- **`grpc_client.rs`**: Manages `ToolGatewayServiceClient<tonic::transport::Channel>`. The `Channel` is internally multiplexed by HTTP/2, but the client struct is guarded by `tokio::sync::Mutex` to satisfy `&self` mutability constraints during the `.await` execution.
-- **`error.rs`**: Leverages the `thiserror` proc-macro. Expands `#[error("Execution failed: {0}")]` into a formal `std::fmt::Display` implementation, enabling zero-overhead formatting in `act.rs` error paths.
+- **`gateway.rs`**: Exposes the `async trait ToolGateway`.
+- **`grpc_client.rs`**: Concrete implementation using `tonic`. Connects to port 9090, maps Rust structs to Protobuf messages, and uses `tokio::sync::Mutex` for thread-safe channel access.
+- **`error.rs`**: Leverages `thiserror` proc-macros to expand `#[error(...)]` tags into `Display` implementations for gRPC failures.
 
 ---
 
-## 4. The Java Tool Gateway: Execution Pipeline
+## 5. The Java Tool Gateway: Execution Pipeline
 
-The Java Gateway uses Spring Boot 4 running Netty. It exposes a reactive, non-blocking gRPC listener that bridges binary payloads into the Jackson 3 processing pipeline.
+The Java Gateway utilizes Spring Boot 4 and Jackson 3 to process tool requests with sub-millisecond overhead.
 
 ```mermaid
 flowchart TD
@@ -157,76 +195,66 @@ flowchart TD
     classDef svc fill:#fff,stroke:#6db33f,stroke-width:2px,color:#333
     classDef jackson fill:#00a8e8,stroke:#007ea7,stroke-width:2px,color:#fff
 
-    Request[Protobuf Bytes\nvia Netty]:::spring --> GrpcService[`GrpcToolGatewayService`\n@GrpcService]:::svc
+    Request[Protobuf Bytes<br/>via Netty]:::spring --> GrpcServiceNode["GrpcToolGatewayService<br/>@GrpcService"]:::svc
     
-    subgraph JSON Parsing Pipeline
-        GrpcService -- "readTree(inputJson)" --> Parser[Jackson 3 ObjectMapper]:::jackson
+    subgraph JSON Pipeline
+        GrpcServiceNode -- "readTree(inputJson)" --> Parser[Jackson 3 ObjectMapper]:::jackson
         Parser -. "throws" .-> Err[JacksonException]:::jackson
         Parser -- "returns" --> Node[JsonNode AST]:::jackson
     end
     
-    subgraph Validation Pipeline
-        Node --> ToolExec[`ToolExecutionService`]:::svc
-        ToolExec -- "Fetches Schema" --> Registry[`ToolRegistryService`]:::svc
-        ToolExec -- "Validates AST" --> Validator[`SchemaValidator`\nnetworknt v3]:::svc
+    subgraph Validation
+        Node --> ToolExec["ToolExecutionService"]:::svc
+        ToolExec -- "Fetches Schema" --> Registry["ToolRegistryService"]:::svc
+        ToolExec -- "Validates AST" --> Validator["SchemaValidator<br/>networknt v3"]:::svc
     end
     
-    Validator -- "Set<ValidationErrors>" --> ToolExec
-    ToolExec -- "Maps to Record" --> GrpcService
-    GrpcService -- "Builds Proto Message\nonNext() & onCompleted()" --> Response[Response Bytes\nvia Netty]:::spring
+    Validator -- "Set&lt;ValidationErrors&gt;" --> ToolExec
+    ToolExec -- "Maps Result Record" --> GrpcServiceNode
+    GrpcServiceNode -- "onNext() & onCompleted()" --> Response[Response Bytes<br/>via Netty]:::spring
 ```
 
-### 4.1 File-by-File Breakdown: Java
+### 5.1 Detailed File Responsibilities: Java
 
 #### Build & Infrastructure
-- **`pom.xml`**: 
-  - `grpc-server-spring-boot-starter`: Scans the classpath for `@GrpcService` and binds them to the Netty server lifecycle. Defaults to port 9090.
-  - `os-maven-plugin`: Resolves `${os.detected.classifier}` (e.g., `linux-x86_64`) to fetch the correct native `protoc` binary.
-  - `protobuf-maven-plugin`: Hooks into the `compile` lifecycle to generate Java stubs before `javac` processes the main source tree.
+- **`pom.xml`**: Manages the `grpc-server-spring-boot-starter` for Netty auto-configuration and `protobuf-maven-plugin` for Java class generation from `agent.proto`.
+- **`GatewayApplication.java`**: Standard entrypoint; triggers component scanning for `@GrpcService` and `@Component`.
 
 #### gRPC Layer
-- **`grpc/server/GrpcToolGatewayService.java`**: 
-  - Extends the generated `ToolGatewayServiceImplBase`.
-  - Implements `executeTool(request, responseObserver)`.
-  - Handles Jackson 3 `JacksonException` specifically, isolating parsing errors from downstream execution logic and ensuring a structured `ToolExecutionResult` with `success=false` is returned over the `StreamObserver` instead of terminating the HTTP/2 stream with an unhandled exception.
+- **`GrpcToolGatewayService.java`**: Bridge between Network and Service. 
+  - Overrides `executeTool(request, responseObserver)`.
+  - Specifically catches `JacksonException` for invalid JSON, returning `success=false` to Rust instead of terminating the stream.
 
-#### Execution Layer
-- **`service/ToolExecutionService.java`**: The routing controller. Retrieves the `ToolDefinition` from the registry. If found, passes the schema and the `JsonNode` to the validator.
-- **`service/ToolRegistryService.java`**: Maintains an in-memory `List<ToolDefinition>`. Currently hardcodes a `calculator` definition containing a raw JSON schema string.
-- **`validation/SchemaValidator.java`**: 
-  - Utilizes `com.networknt.schema` v3.0.x (Jackson 3 compatible).
-  - Instantiates a `SchemaRegistry` to compile the raw JSON schema into an executable validation graph.
-  - Traverses the incoming `JsonNode` against the schema graph, returning a `Set<String>` detailing structural violations (e.g., missing required fields, type mismatches).
+#### Execution & Validation
+- **`ToolExecutionService.java`**: The routing brain. Orchestrates the registry and validator.
+- **`ToolRegistryService.java`**: Maintains `List<ToolDefinition>`. Contains hardcoded JSON schemas for registered tools.
+- **`SchemaValidator.java`**: Compiles raw JSON Schema strings into a validation graph using `com.networknt.schema` v3.0.x. Performs recursive AST traversal against the incoming `JsonNode`.
 
 ---
 
-## 5. End-to-End Sequence: A Tool Call (Deep Dive)
+## 6. End-to-End Sequence: A Tool Call (Deep Dive)
 
-This sequence exposes the synchronous points, the await boundaries, and data transformations.
+This sequence traces the synchronous points, the await boundaries, and data transformations.
 
 ```mermaid
 sequenceDiagram
     autonumber
-    box rgba(222, 165, 132, 0.1) Rust Tokio Runtime
+    box rgba(222, 165, 132, 0.1) Rust Runtime
         participant Step as step_executor.rs
-        participant Reason as reason.rs
         participant Act as act.rs
         participant GrpcClient as grpc_client.rs
     end
-    box rgba(106, 138, 130, 0.1) HTTP/2 Transport
+    box rgba(106, 138, 130, 0.1) Transport
         participant Channel as tonic::transport
         participant Netty as Java Netty Server
     end
-    box rgba(176, 114, 25, 0.1) Java Spring Boot 4
+    box rgba(176, 114, 25, 0.1) Java Gateway
         participant JavaGrpc as GrpcToolGatewayService
         participant ToolSvc as ToolExecutionService
         participant Validator as SchemaValidator
     end
 
-    Step->>Reason: Execute Reason Phase (.await)
-    Reason-->>Step: PhaseOutput { action: Some("calculator") }
     Step->>Act: act(process, "calculator", gateway)
-    
     Act->>GrpcClient: execute(ToolRequest)
     GrpcClient->>GrpcClient: Mutex.lock().await (Acquire gRPC Client)
     GrpcClient->>Channel: execute_tool(ProtoToolExecutionRequest)
@@ -254,11 +282,13 @@ sequenceDiagram
     Act-->>Step: PhaseOutput { tool_output: Some("data") }
 ```
 
-## 6. Error Propagation Mechanics
+---
 
-Errors at different layers are handled deterministically to prevent systemic crashes:
+## 7. Error Propagation Mechanics
+
+Errors at different layers are handled deterministically:
 1.  **JSON Malformation (Java)**: Caught by `JacksonException` in `GrpcToolGatewayService`. Returns `success=false` with specific parsing errors inside the `ToolExecutionResult` proto. Rust interprets this as a successful network call that resulted in a tool failure.
 2.  **Schema Violation (Java)**: Caught by `SchemaValidator`. Returns `success=false` with structural errors. Handled identically to JSON malformation.
-3.  **Network Failure/Timeout (Rust/Java)**: `tonic::transport` detects socket closure or HTTP/2 stream RST. Returns a `tonic::Status` error to `GrpcToolClient`.
+3.  **Network Failure/Timeout (Boundary)**: `tonic::transport` detects socket closure or HTTP/2 stream RST. Returns a `tonic::Status` error to `GrpcToolClient`.
 4.  **Client Mapping (Rust)**: `GrpcToolClient` converts `tonic::Status` into `ToolGatewayError::ExecutionFailed`.
 5.  **Phase Logging (Rust)**: `act.rs` matches on `Err(err)` and embeds the stringified `ToolGatewayError` into the `PhaseOutput.tool_output` using a distinct `ERROR_GATEWAY_UNREACHABLE` tag, ensuring the LLM context is informed of the infrastructure failure.

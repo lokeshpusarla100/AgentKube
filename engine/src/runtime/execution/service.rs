@@ -7,7 +7,7 @@ use tokio_util::sync::CancellationToken;
 use tonic::{Request, Response, Status};
 
 use crate::app::load_process_from_file;
-use crate::runtime::{MockClient, MockToolGateway, ToolExecutionResult, spawn_agent_loop};
+use crate::runtime::{AgentClient, ToolGateway, spawn_agent_loop};
 use crate::runtime::model::agent_proto::{
     agent_service_server::AgentService,
     StartAgentRequest, StartAgentResponse,
@@ -15,35 +15,39 @@ use crate::runtime::model::agent_proto::{
     StreamAgentRequest, AgentStatusResponse
 };
 
-pub struct AgentServiceImpl {
+pub struct AgentServiceImpl<C, G> 
+where 
+    C: AgentClient + 'static,
+    G: ToolGateway + 'static
+{
     // Thread-safe map of active agent IDs to their cancellation tokens.
     active_agents: DashMap<String, CancellationToken>,
     // Shared LLM client used by all agents spawned by this service.
-    client: Arc<MockClient>,
+    client: Arc<C>,
     // Shared Tool Gateway used by all agents to execute tools.
-    gateway: Arc<MockToolGateway>,
+    gateway: Arc<G>,
 }
 
-impl Default for AgentServiceImpl {
-    fn default() -> Self {
+impl<C, G> AgentServiceImpl<C, G> 
+where 
+    C: AgentClient + 'static,
+    G: ToolGateway + 'static
+{
+    pub fn new(client: Arc<C>, gateway: Arc<G>) -> Self {
         Self {
             active_agents: DashMap::new(),
-            client: Arc::new(MockClient {
-                response: "I will use the provided tools to fulfill the request.".to_string(),
-            }),
-            gateway: Arc::new(MockToolGateway {
-                result: ToolExecutionResult {
-                    success: true,
-                    output: "Mock result from AgentService".to_string(),
-                    errors: vec![],
-                },
-            }),
+            client,
+            gateway,
         }
     }
 }
 
 #[tonic::async_trait]
-impl AgentService for AgentServiceImpl {
+impl<C, G> AgentService for AgentServiceImpl<C, G> 
+where 
+    C: AgentClient + 'static,
+    G: ToolGateway + 'static
+{
     async fn start_agent(
         &self,
         request: Request<StartAgentRequest>,
