@@ -1,20 +1,8 @@
 use tonic::transport::Server;
 use std::sync::Arc;
-use crate::runtime::execution::AgentServiceImpl;
-use crate::runtime::model::agent_proto::agent_service_server::AgentServiceServer;
-use crate::runtime::{MockClient, GrpcToolClient};
-
-// App startup glue lives outside main so it can be tested.
-pub mod app;
-// Expose config loading as part of the engine surface.
-pub mod config;
-// Expose runtime process handling as part of the engine surface.
-pub mod process;
-// Expose the execution loop runtime.
-pub mod runtime;
-// Test-only helpers keep repeated setup out of production modules.
-#[cfg(test)]
-pub mod test_support;
+use engine::runtime::execution::AgentServiceImpl;
+use engine::runtime::model::agent_proto::agent_service_server::AgentServiceServer;
+use engine::runtime::{MockClient, GrpcToolClient};
 
 // The main entry point starts the gRPC server to handle agent requests over the network.
 #[tokio::main]

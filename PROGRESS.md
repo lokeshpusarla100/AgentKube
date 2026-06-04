@@ -57,14 +57,15 @@ Engine infrastructure config now lives in `examples/engine.yaml`. This is where 
 - [x] Java gRPC server implementation (`ExecuteTool`)
   Implemented `GrpcToolGatewayService` in Java to route requests to the `ToolExecutionService`.
 - [ ] Token-bucket rate limiting per agent class
-- [ ] Tool execution proxy (sandbox execution)
+- [x] Live Rust Engine -> Java Gateway gRPC call
+  Verified: Rust successfully called `ExecuteTool` on port 9090 and received a response.
 
 ## Current Integration Checkpoint
 - [x] Rust tests passing: 54 tests
-- [x] Java tests passing: 3 tests (Compilation Success)
+- [x] Java tests passing: 3 tests + Compilation Success
 - [x] System Atlas Documentation: Detailed 26-step chronological roadmap completed.
-- [x] ADRs logged: 0012 (Async), 0013 (Arc), 0014 (Schema), 0015 (Jackson3), 0016 (Tokens).
-- [ ] Live Rust Engine -> Java Gateway gRPC call
+- [x] ADRs logged: 0012, 0013, 0014, 0015, 0016.
+- [x] Live End-to-End Handshake: COMPLETED.
 1. Wire `act()` to accept a `ToolGateway`.
 2. Update `execute_step()` to pass the gateway into the Act phase.
 3. Add tests using `MockToolGateway`.
