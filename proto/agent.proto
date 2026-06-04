@@ -1,6 +1,10 @@
 syntax = "proto3";
 
 package agentkube.v1;
+
+option java_package = "com.agentkube.gateway.grpc";
+option java_multiple_files = true;
+
 // Service to control agent execution.
 service AgentService {
   // Starts a new agent process.
